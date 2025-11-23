@@ -22,39 +22,62 @@
 
 #### Actionables:
 1. **Download COVIDx CXR-4 dataset**
-   - Source: https://www.kaggle.com/datasets/andyczhao/covidx-cxr2 or official repo
-   - Alternative source: https://github.com/lindawangg/COVID-Net
-   - Expected size: ~50GB+ (plan storage accordingly)
+   - **Source**: https://www.kaggle.com/datasets/andyczhao/covidx-cxr2
+   - **Alternative**: https://github.com/lindawangg/COVID-Net
+   - **Download size**: ~31 GB (ZIP archive)
+   - **Requires**: Kaggle account (free)
 
-2. **Understand dataset structure**
+2. **Dataset Statistics (COVIDx CXR-4)**
    ```
-   COVIDx CXR-4/
-   ├── train/
-   │   ├── COVID/
-   │   ├── Lung_Opacity/
-   │   ├── Normal/
-   │   └── Viral Pneumonia/
-   └── test/
-       ├── COVID/
-       ├── Lung_Opacity/
-       ├── Normal/
-       └── Viral Pneumonia/
+   Total Images: 84,818
+   Total Subjects: 45,342
+   Format: ZIP archive with train/val/test splits
    ```
 
-3. **Document metadata**
+3. **Understand dataset structure**
+   ```
+   COVIDx-CXR4/
+   ├── train.txt          # Training set labels/paths
+   ├── val.txt            # Validation set labels/paths
+   ├── test.txt           # Test set labels/paths
+   └── images/            # All CXR images
+       ├── image1.png
+       ├── image2.png
+       └── ...
+   ```
+
+4. **Label file format** (train.txt, val.txt, test.txt)
+   ```
+   # Each line: patient_id filename label datasource
+   # Example: patient00001 image001.png positive cohen
+   ```
+
+5. **Classification variants to choose from**
+
+   | Variant | Classes | Description |
+   |---------|---------|-------------|
+   | **Dataset A** | 3 classes | negative / non-COVID pneumonia / COVID-19 |
+   | **Dataset B** | 2 classes | COVID-negative / COVID-positive |
+
+   **Recommendation**: Start with Dataset B (binary) for simpler baseline, then optionally try Dataset A.
+
+6. **Document metadata**
    - Total number of images per class
-   - Image dimensions and formats
-   - Any patient-level information
-   - Train/test split ratio
+   - Image dimensions (variable - need resizing)
+   - Patient-level grouping (important for splits!)
+   - Train/val/test distribution
 
 #### Deliverables:
 - [ ] Downloaded dataset in `data/raw/`
 - [ ] `data/README.md` with dataset statistics
+- [ ] Decision on Dataset A vs B documented
 
 #### Success Criteria:
-- Dataset fully downloaded and accessible
-- Can open and display sample images
+- Dataset fully downloaded (~31GB) and extracted
+- Can parse train.txt, val.txt, test.txt files
+- Can load and display sample images
 - Understand class distribution
+- Decided on 2-class vs 3-class variant
 
 ---
 
@@ -67,20 +90,35 @@
 
 2. **Analyze class distribution**
    ```python
-   # Example analysis
-   import os
+   # Example analysis for COVIDx CXR-4
    import pandas as pd
    import matplotlib.pyplot as plt
 
-   classes = ['COVID', 'Lung_Opacity', 'Normal', 'Viral Pneumonia']
-   counts = {}
-   for cls in classes:
-       path = f'data/raw/train/{cls}'
-       counts[cls] = len(os.listdir(path))
+   def load_covidx_labels(txt_path):
+       """Load COVIDx label file (train.txt, val.txt, test.txt)"""
+       data = []
+       with open(txt_path, 'r') as f:
+           for line in f:
+               parts = line.strip().split()
+               if len(parts) >= 3:
+                   patient_id, filename, label = parts[0], parts[1], parts[2]
+                   data.append({'patient_id': patient_id, 'filename': filename, 'label': label})
+       return pd.DataFrame(data)
+
+   # Load all splits
+   train_df = load_covidx_labels('data/raw/train.txt')
+   val_df = load_covidx_labels('data/raw/val.txt')
+   test_df = load_covidx_labels('data/raw/test.txt')
+
+   print(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
+
+   # Class distribution
+   print(train_df['label'].value_counts())
 
    # Visualize
-   plt.bar(counts.keys(), counts.values())
-   plt.title('Class Distribution')
+   train_df['label'].value_counts().plot(kind='bar')
+   plt.title('Training Set Class Distribution')
+   plt.ylabel('Number of Images')
    plt.savefig('results/stage1/class_distribution.png')
    ```
 
@@ -172,7 +210,7 @@
 #### Actionables:
 1. **Create dataset module** `src/data/dataset.py`
 
-2. **Implement COVIDxDataset class**
+2. **Implement COVIDxDataset class** (adapted for COVIDx CXR-4 structure)
    ```python
    import torch
    from torch.utils.data import Dataset
@@ -180,31 +218,53 @@
    import os
 
    class COVIDxDataset(Dataset):
-       def __init__(self, data_dir, split='train', transform=None):
+       """
+       Dataset for COVIDx CXR-4.
+       Reads from train.txt/val.txt/test.txt label files.
+       """
+       def __init__(self, data_dir, split='train', transform=None, binary=True):
            """
            Args:
-               data_dir: Path to data directory
-               split: 'train' or 'test'
+               data_dir: Path to COVIDx data directory
+               split: 'train', 'val', or 'test'
                transform: Torchvision transforms
+               binary: If True, use 2-class (COVID+/COVID-). If False, use 3-class.
            """
            self.data_dir = data_dir
            self.split = split
            self.transform = transform
+           self.binary = binary
 
-           self.classes = ['COVID', 'Lung_Opacity', 'Normal', 'Viral_Pneumonia']
+           # Define class mapping
+           if binary:
+               # Dataset B: Binary classification
+               self.classes = ['negative', 'positive']
+           else:
+               # Dataset A: 3-class classification
+               self.classes = ['negative', 'pneumonia', 'COVID-19']
+
            self.class_to_idx = {c: i for i, c in enumerate(self.classes)}
-
            self.samples = self._load_samples()
 
        def _load_samples(self):
+           """Load samples from label txt file."""
            samples = []
-           for class_name in self.classes:
-               class_dir = os.path.join(self.data_dir, self.split, class_name)
-               for img_name in os.listdir(class_dir):
-                   samples.append({
-                       'path': os.path.join(class_dir, img_name),
-                       'label': self.class_to_idx[class_name]
-                   })
+           label_file = os.path.join(self.data_dir, f'{self.split}.txt')
+
+           with open(label_file, 'r') as f:
+               for line in f:
+                   parts = line.strip().split()
+                   if len(parts) >= 3:
+                       patient_id, filename, label = parts[0], parts[1], parts[2]
+
+                       # Map label to class index
+                       if label in self.class_to_idx:
+                           samples.append({
+                               'patient_id': patient_id,
+                               'path': os.path.join(self.data_dir, 'images', filename),
+                               'label': self.class_to_idx[label]
+                           })
+
            return samples
 
        def __len__(self):
@@ -218,7 +278,11 @@
            if self.transform:
                image = self.transform(image)
 
-           return image, label
+           return image, torch.tensor(label, dtype=torch.long)
+
+       def get_patient_ids(self):
+           """Return list of patient IDs (useful for patient-aware splits)."""
+           return [s['patient_id'] for s in self.samples]
    ```
 
 3. **Implement NPZ-based dataset for federated clients**
@@ -272,40 +336,73 @@
 
 2. **Implement non-IID splitting strategies**
 
-   **Strategy A: Label Skew (Dirichlet Distribution)**
+   **IMPORTANT: Patient-Aware Splitting for Medical Data**
+   ```python
+   # COVIDx has patient_id for each image - MUST split by patient, not image!
+   # Otherwise: data leakage (same patient in train AND test)
+
+   def get_patient_groups(samples):
+       """Group sample indices by patient_id."""
+       from collections import defaultdict
+       patient_to_indices = defaultdict(list)
+       for idx, sample in enumerate(samples):
+           patient_to_indices[sample['patient_id']].append(idx)
+       return patient_to_indices
+   ```
+
+   **Strategy A: Label Skew (Dirichlet Distribution) - Patient-Aware**
    ```python
    import numpy as np
    from collections import defaultdict
 
-   def dirichlet_split(labels, num_clients, alpha=0.5):
+   def dirichlet_split_patient_aware(samples, num_clients, alpha=0.5):
        """
        Split data using Dirichlet distribution for non-IID.
+       PATIENT-AWARE: All images from same patient go to same client.
        Lower alpha = more non-IID (skewed)
        alpha=0.5 is commonly used in FL papers
        """
-       num_classes = len(np.unique(labels))
-       label_indices = defaultdict(list)
+       # Group by patient first
+       patient_to_indices = defaultdict(list)
+       patient_to_label = {}
 
-       for idx, label in enumerate(labels):
-           label_indices[label].append(idx)
+       for idx, sample in enumerate(samples):
+           pid = sample['patient_id']
+           patient_to_indices[pid].append(idx)
+           patient_to_label[pid] = sample['label']  # Assume same patient = same label
 
-       client_indices = [[] for _ in range(num_clients)]
+       patients = list(patient_to_indices.keys())
+       patient_labels = [patient_to_label[p] for p in patients]
 
+       num_classes = len(np.unique(patient_labels))
+       label_to_patients = defaultdict(list)
+
+       for pid, label in zip(patients, patient_labels):
+           label_to_patients[label].append(pid)
+
+       client_patients = [[] for _ in range(num_clients)]
+
+       # Distribute patients (not images) using Dirichlet
        for label in range(num_classes):
-           indices = np.array(label_indices[label])
-           np.random.shuffle(indices)
+           pids = np.array(label_to_patients[label])
+           np.random.shuffle(pids)
 
-           # Dirichlet distribution
            proportions = np.random.dirichlet([alpha] * num_clients)
-           proportions = (proportions * len(indices)).astype(int)
-
-           # Adjust to ensure all samples are allocated
-           proportions[-1] = len(indices) - sum(proportions[:-1])
+           proportions = (proportions * len(pids)).astype(int)
+           proportions[-1] = len(pids) - sum(proportions[:-1])
 
            start = 0
-           for client_id, num_samples in enumerate(proportions):
-               client_indices[client_id].extend(indices[start:start + num_samples])
-               start += num_samples
+           for client_id, num_patients in enumerate(proportions):
+               client_patients[client_id].extend(pids[start:start + num_patients])
+               start += num_patients
+
+       # Convert patient lists back to image indices
+       client_indices = []
+       for client_pids in client_patients:
+           indices = []
+           for pid in client_pids:
+               indices.extend(patient_to_indices[pid])
+           client_indices.append(indices)
 
        return client_indices
    ```

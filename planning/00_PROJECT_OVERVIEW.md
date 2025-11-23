@@ -8,9 +8,25 @@
 | Attribute | Details |
 |-----------|---------|
 | **Dataset** | COVIDx CXR-4 (Chest X-ray images for COVID-19 detection) |
+| **Source** | https://www.kaggle.com/datasets/andyczhao/covidx-cxr2 |
 | **Framework** | Flower (Federated Learning) |
 | **Trust Dimensions** | Privacy (Differential Privacy) + Interpretability (Grad-CAM/SHAP) |
 | **Total Points** | 6 (Stage 1: 2pts, Stage 2: 4pts) |
+
+---
+
+## Dataset Quick Reference
+
+| Property | Value |
+|----------|-------|
+| **Total Images** | 84,818 |
+| **Total Subjects** | 45,342 |
+| **Download Size** | ~31 GB (ZIP) |
+| **Splits** | train.txt, val.txt, test.txt |
+| **Task Options** | Binary (COVID+/-) or 3-class (negative/pneumonia/COVID) |
+| **Image Format** | PNG (variable sizes, need resizing) |
+
+**Important**: Dataset includes patient IDs - must use **patient-aware splitting** to prevent data leakage!
 
 ---
 
@@ -30,27 +46,27 @@
 
 ### Actionables
 1. **Download and explore COVIDx CXR-4 dataset**
-   - Download from official source
-   - Understand data structure (images, labels, metadata)
-   - Document class distribution (COVID-positive, COVID-negative, normal, pneumonia)
+   - Download from Kaggle (~31 GB): https://www.kaggle.com/datasets/andyczhao/covidx-cxr2
+   - Parse label files: train.txt, val.txt, test.txt
+   - Document class distribution
+   - **Decide**: Binary (COVID+/-) vs 3-class classification
 
 2. **Design data preprocessing pipeline**
-   - Image resizing (e.g., 224x224 for standard CNNs)
-   - Normalization strategy
-   - Data augmentation (rotation, flipping, contrast adjustment)
-   - Handle class imbalance (oversampling/undersampling/class weights)
+   - Image resizing (224x224 for standard CNNs)
+   - Normalization strategy (ImageNet or dataset-specific)
+   - Data augmentation (rotation, flipping, contrast)
+   - Handle class imbalance (class weights recommended)
 
-3. **Create federated data splits**
-   - Split dataset into 3 client partitions
-   - Implement **non-IID splits** (realistic scenario)
-   - Option A: Label skew (each client has different class distributions)
-   - Option B: Quantity skew (different number of samples per client)
-   - Document partitioning strategy
+3. **Create federated data splits (PATIENT-AWARE)**
+   - Split by **patient_id** (not by image!) to prevent data leakage
+   - Implement non-IID splits using Dirichlet distribution
+   - 3 client partitions with label skew
+   - Document partitioning strategy and statistics
 
 4. **Implement data loading utilities**
-   - Create PyTorch Dataset class for COVIDx CXR-4
-   - Create data loader scripts for each client
-   - Script to generate `client_1_data.npz`, `client_2_data.npz`, `client_3_data.npz`
+   - Create PyTorch Dataset class that reads from .txt label files
+   - Create NPZ export for federated clients
+   - Generate `client_1_data.npz`, `client_2_data.npz`, `client_3_data.npz`
 
 5. **Set up project infrastructure**
    - Initialize Git repository structure
