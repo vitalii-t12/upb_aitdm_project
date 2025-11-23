@@ -3,12 +3,30 @@ import torch
 import torch.nn as nn
 import numpy as np
 import argparse
+import sys
+import os
+
+# Add the project root to the Python path
+from model_side.data.data_loader_enhanced import get_federated_client, get_client_validation
 from collections import OrderedDict
 from typing import Dict, List, Tuple
 
-from src.models.cnn_model import COVIDxCNN
-from src.data.dataset import COVIDxClientDataset
-from src.data.preprocessing import get_train_transforms, get_test_transforms
+#from model_side.data.data_loader_enhanced import *
+from torchvision import transforms
+
+from model_side.models.cnn_model import COVIDxCNN
+
+# from model_side.data.preprocessing import get_train_transforms, get_test_transforms
+
+
+IMG_SIZE = (224, 224)
+
+transform = transforms.Compose([
+        transforms.Resize(IMG_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                             0.229, 0.224, 0.225])
+    ])
 
 class COVIDxClient(fl.client.NumPyClient):
     """
@@ -104,17 +122,14 @@ def main(args):
     data_path = f"data/federated/client_{args.client_id}_data.npz"
     print(f"Loading data from {data_path}")
 
-    train_dataset = COVIDxClientDataset(data_path, 'train', get_train_transforms())
-    val_dataset = COVIDxClientDataset(data_path, 'test', get_test_transforms())
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True
-    )
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False
-    )
+    # train_loader = torch.utils.data.DataLoader(
+    #     train_dataset, batch_size=args.batch_size, shuffle=True
+    # )
+    train_loader = get_federated_client(args.client_id, batch_size=args.batch_size)
+    val_loader = get_client_validation(args.client_id, batch_size=args.batch_size)
 
-    print(f"Client {args.client_id}: {len(train_dataset)} train, {len(val_dataset)} val samples")
+    print(f"Client {args.client_id}: {len(train_loader.dataset)} train, {len(val_loader.dataset)} val samples")
 
     # Model
     model = COVIDxCNN(num_classes=4, pretrained=True)

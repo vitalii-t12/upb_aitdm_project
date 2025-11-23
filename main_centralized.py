@@ -1,13 +1,21 @@
 # main_centralized.py
 import argparse
-from src.models.cnn_model import COVIDxCNN
-from src.models.train_centralized import Trainer
-from src.data.dataset import COVIDxDataset
-from src.data.preprocessing import get_train_transforms, get_test_transforms
+from model_side.models.cnn_model import COVIDxCNN
+from model_side.models.train_centralized import Trainer
+from model_side.data.data_loader_enhanced import COVIDxZipDataset
+# from model_side.data.preprocessing import get_train_transforms, get_test_transforms
 
 import torch
-
+from torchvision import transforms
 from torch.utils.data import DataLoader
+
+IMG_SIZE = (224, 224)
+transform = transforms.Compose([
+        transforms.Resize(IMG_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                             0.229, 0.224, 0.225])
+    ])
 
 def main(args):
     # Config
@@ -22,8 +30,8 @@ def main(args):
     print(f"Using device: {device}")
 
     # Data
-    train_dataset = COVIDxDataset('data/processed', 'train', get_train_transforms())
-    val_dataset = COVIDxDataset('data/processed', 'test', get_test_transforms())
+    train_dataset = COVIDxZipDataset('data/processed', 'train', transform=transform)
+    val_dataset = COVIDxZipDataset('data/processed', 'test', transform=transform)
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
