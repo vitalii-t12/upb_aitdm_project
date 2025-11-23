@@ -1,0 +1,37 @@
+We want to separate Python versions such that installing/uninstalling new dependencies does not create dependency deadlocks or breaking pipelines
+
+For that I suggest the following versioning packages (Only use one):
+
+Virtualenv:
+	https://virtualenv.pypa.io/en/latest/
+
+Pyenv:
+	https://github.com/pyenv/pyenv
+	https://www.youtube.com/watch?v=MVyb-nI4KyI
+
+Astral.sh:
+	https://astral.sh/
+	https://github.com/astral-sh/ruff
+	
+	
+Useful resources for Federated Learning and Flower:
+
+Federated Learning extensive survey - https://arxiv.org/pdf/1907.09693
+
+Pytorch tutorial Flower
+	https://flower.ai/docs/framework/tutorial-quickstart-pytorch.html
+	https://flower.ai/docs/framework/tutorial-quickstart-pytorch-lightning.html
+	https://flower.ai/docs/framework/tutorial-series-get-started-with-flower-pytorch.html
+	https://github.com/adap/flower/tree/main/examples/quickstart-pytorch-lightning - when you don't know about a function/variable -> navigate through this
+	 
+Flower Documentation - 
+https://www.youtube.com/@flowerlabs/playlists
+
+Flower for Pytorch - https://flower.ai/docs/framework/tutorial-quickstart-pytorch-lightning.html
+ 
+Setup tutorials / Technicalities not necessarily ML related - https://www.youtube.com/watch?v=cRebUIGB5RU&list=PLNG4feLHqCWlnj8a_E1A_n5zr2-8pafTB
+ 
+"How to build" Tutorials and Workshops - https://www.youtube.com/watch?v=FGTc2TQq7VM&list=PLNG4feLHqCWlZz7sDDV3KrdkwqZVpVu5W
+ 
+Custom Aggregation Strategy - https://www.youtube.com/watch?v=udDSIQyYzNM
+

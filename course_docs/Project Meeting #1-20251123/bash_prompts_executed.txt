@@ -1,0 +1,16 @@
+marmy@marmy-GL553VD:~/Desktop/AITDM$ git clone --depth=1 https://github.com/adap/flower.git _tmp \
+             && mv _tmp/examples/quickstart-pytorch-lightning . \
+             && rm -rf _tmp && cd quickstart-pytorch-lightning
+
+
+(If not moved to quickstart-pytorch-lightning)
+(marmy@marmy-GL553VD:~/Desktop/AITDM$ cd ./quickstart-pytorch-lightning)
+
+
+marmy@marmy-GL553VD:~/Desktop/AITDM/quickstart-pytorch-lightning$ pip install -e .
+
+
+After having the clients and servers installed:
+
+marmy@marmy-GL553VD:~/Desktop/AITDM/quickstart-pytorch-lightning$ flwr run .
+
