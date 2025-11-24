@@ -5,7 +5,7 @@ import numpy as np
 import argparse
 import sys
 import os
-
+from tqdm import tqdm
 # Add the project root to the Python path
 from model_side.data.data_loader_enhanced import get_federated_client, get_client_validation
 from collections import OrderedDict
@@ -62,7 +62,7 @@ class COVIDxClient(fl.client.NumPyClient):
         total = 0
 
         for epoch in range(local_epochs):
-            for images, labels in self.train_loader:
+            for images, labels in tqdm(self.train_loader, desc=f"Training Client"):
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 optimizer.zero_grad()
@@ -95,7 +95,7 @@ class COVIDxClient(fl.client.NumPyClient):
         total = 0
 
         with torch.no_grad():
-            for images, labels in self.val_loader:
+            for images, labels in tqdm(self.val_loader, desc="Evaluating Client"):
                 images, labels = images.to(self.device), labels.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
