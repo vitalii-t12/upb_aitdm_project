@@ -11,7 +11,7 @@ class COVIDxCNN(nn.Module):
         super(COVIDxCNN, self).__init__()
 
         # Load pretrained ResNet18
-        self.backbone = models.resnet18(pretrained=pretrained)
+        self.backbone = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
 
         # Modify first conv for grayscale (if needed)
         # self.backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -69,10 +69,11 @@ class SimpleCNN(nn.Module):
         return x
 
 # Test script
-model = COVIDxCNN(num_classes=2)
-print(f"Model parameters: {model.get_num_parameters():,}")
+if __name__ == "__main__":
+    model = COVIDxCNN(num_classes=2)
+    print(f"Model parameters: {model.get_num_parameters():,}")
 
-# Test forward pass
-x = torch.randn(4, 3, 224, 224)
-output = model(x)
-print(f"Output shape: {output.shape}")
+    # Test forward pass
+    x = torch.randn(4, 3, 224, 224)
+    output = model(x)
+    print(f"Output shape: {output.shape}")

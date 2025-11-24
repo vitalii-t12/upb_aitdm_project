@@ -2,9 +2,8 @@
 import argparse
 from model_side.models.cnn_model import COVIDxCNN
 from model_side.models.train_centralized import Trainer
-from model_side.data.data_loader_enhanced import COVIDxZipDataset
 # from model_side.data.preprocessing import get_train_transforms, get_test_transforms
-
+from model_side.data.data_loader_enhanced import *
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
@@ -22,22 +21,23 @@ def main(args):
     config = {
         'learning_rate': args.lr,
         'weight_decay': 1e-5,
-        'class_weights': [2.0, 1.0, 1.0, 1.5]  # Adjust based on class imbalance
+        'class_weights': [1.0, 2.0]  # Adjust weights for 2 classes (negative, positive)
     }
 
     # Device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    # Data
-    train_dataset = COVIDxZipDataset('data/processed', 'train', transform=transform)
-    val_dataset = COVIDxZipDataset('data/processed', 'test', transform=transform)
+    # train_dataset = COVIDxZipDataset('archive.zip', 'train.txt', transform=transform)
+    # val_dataset = COVIDxZipDataset('archive.zip', 'test.txt', transform=transform)
+    #
+    # train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    # val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-
+    train_loader = get_federated_client(client_id=1, batch_size=args.batch_size)
+    val_loader = get_client_validation(client_id=1, batch_size=args.batch_size)
     # Model
-    model = COVIDxCNN(num_classes=4, pretrained=True)
+    model = COVIDxCNN(num_classes=2, pretrained=True)
 
     # Train
     trainer = Trainer(model, device, config)

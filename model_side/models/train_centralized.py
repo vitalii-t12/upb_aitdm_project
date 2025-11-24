@@ -1,3 +1,5 @@
+import os.path
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -91,10 +93,12 @@ class Trainer:
             # Save best model
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
-                torch.save(self.model.state_dict(), 'models/best_centralized.pth')
+                torch.save(self.model.state_dict(), 'best_centralized.pth')
 
         return self.history
 
     def save_history(self, path):
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         with open(path, 'w') as f:
             json.dump(self.history, f)
