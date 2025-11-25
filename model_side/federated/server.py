@@ -28,11 +28,47 @@ def get_on_fit_config(local_epochs: int):
         }
     return fit_config
 
+import flwr as fl
+import torch
+import numpy as np
+from flwr.common import parameters_to_ndarrays
+from model_side.models.cnn_model import COVIDxCNN
+
+class SaveModelStrategy(fl.server.strategy.FedAvg):
+
+    def aggregate_fit(self, server_round, results, failures):
+        # Face agregarea normală
+        aggregated_parameters, metrics = super().aggregate_fit(server_round, results, failures)
+
+        if aggregated_parameters is not None:
+            # Convertim parametrii Flower -> numpy arrays
+            ndarrays = parameters_to_ndarrays(aggregated_parameters)
+
+            # Reconstruim modelul PyTorch EXACT ca pe client
+            model = COVIDxCNN(num_classes=2, pretrained=True)
+
+            # Structurăm parametrii în state_dict
+            state_dict_keys = list(model.state_dict().keys())
+            new_state_dict = {
+                key: torch.tensor(array) for key, array in zip(state_dict_keys, ndarrays)
+            }
+
+            # Încărcăm parametrii în model
+            model.load_state_dict(new_state_dict, strict=True)
+
+            # Salvăm modelul PyTorch
+            save_path = f"server_model_round_{server_round}.pth"
+            torch.save(model.state_dict(), save_path)
+
+            print(f"💾 Model PyTorch salvat la: {save_path}")
+
+        return aggregated_parameters, metrics
+
 def main(args):
     # Define strategy
-    strategy = fl.server.strategy.FedAvg(
-        fraction_fit=1.0,  # Use all available clients for training
-        fraction_evaluate=1.0,  # Use all clients for evaluation
+    strategy = SaveModelStrategy(
+        fraction_fit=1.0,
+        fraction_evaluate=1.0,
         min_fit_clients=args.num_clients,
         min_evaluate_clients=args.num_clients,
         min_available_clients=args.num_clients,

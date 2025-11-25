@@ -1,6 +1,6 @@
 # Pornește serverul
 Write-Host "Pornesc serverul..."
-$server = Start-Process -FilePath "python" -ArgumentList "-m model_side.federated.server --num_rounds 5 --num_clients 3 --local_epochs 2" -PassThru
+$server = Start-Process -FilePath "python" -ArgumentList "-m model_side.federated.server --num_rounds 1 --num_clients 3 --local_epochs 2" -PassThru
 
 # Așteaptă ca serverul să se inițializeze
 Start-Sleep -Seconds 3

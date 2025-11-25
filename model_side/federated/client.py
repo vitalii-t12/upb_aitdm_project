@@ -132,7 +132,7 @@ def main(args):
     print(f"Client {args.client_id}: {len(train_loader.dataset)} train, {len(val_loader.dataset)} val samples")
 
     # Model
-    model = COVIDxCNN(num_classes=4, pretrained=True)
+    model = COVIDxCNN(num_classes=2, pretrained=True)
 
     # Create client
     client = COVIDxClient(model, train_loader, val_loader, device)
